@@ -18,7 +18,7 @@
       <config>
          <name>LEDWidth</name>
          <values>
-            <value>45</value>
+            <value>10</value>
          </values>
       </config>
    </configField>
@@ -101,13 +101,13 @@
       <config>
          <name>Ndiff</name>
          <values>
-            <value>2</value>
+            <value>3</value>
          </values>
       </config>
       <config>
          <name>Nevent</name>
          <values>
-            <value>2</value>
+            <value>5</value>
          </values>
       </config>
       <config>

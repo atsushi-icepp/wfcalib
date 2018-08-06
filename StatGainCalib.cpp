@@ -88,15 +88,17 @@ void StatGainCalib(void) {
       // int iphe = (int)TMath::Exp(TMath::Log(npheRange[0]) + logstep * istep);
       int iphe = istep*(npheRange[1]-npheRange[0])/Nstep;
       for(int irep=0;irep<Nevent;irep++){
-         // std::vector<Double_t> noisevar;
-         // std::vector<Double_t> inter;
-         cout<<istep<<" "<<iphe<<endl;
+         // cout<<istep<<" "<<iphe<<endl;
 
          for (int i = 0; i < noiselist.size(); i++) {
             noiselevel=noiselist[i];
             Waveform* wf= new Waveform(Nbins,-100,1000);
             wf->SetDarkNoiseFrequency(DNFreq);
-            wf->MakeEvent(iphe);
+            Int_t Npho=iphe;
+            if (LightSource=="LED") {
+               Npho=gRandom->Poisson(iphe);
+            }
+            wf->MakeEvent(Npho);
             wf->MakeDarkNoise();
             wf->SetNoiseLevel(noiselevel);
             wf->MakeElectricNoise();
@@ -129,7 +131,6 @@ void StatGainCalib(void) {
 
       Double_t par[3];
       Double_t err[3];
-      // Double_t YACut=YCut(((TGraph*)(*cagrQNvar)[i]));
       TF1* pol1= new TF1("fitfunc",fitfunc,-100,5000,3);
       // pol1->SetParLimits(2,0,1);
       // pol1->SetParLimits(0,-1,20);
@@ -180,60 +181,6 @@ Double_t MultipleError(Double_t &value1, Double_t &value1err, Double_t &value2, 
    /*calculate error of value 1* value 2*/
    return TMath::Sqrt(TMath::Power(value1err* value2,2)+TMath::Power(value1*value2err,2));
 }
-
-// void LoadSimConfig(){
-//    ifstream fsimconf;
-//    TString simconfname = "./SimConfig.dat";
-//    std::cout<<"Loading Configuration..."<<std::endl;
-//    fsimconf.open(simconfname.Data(),std::ios::in);
-//    string linestr;
-//    while (!fsimconf.eof()) {
-//       fsimconf>>linestr;
-//       std::cout<<linestr<<std::endl;
-//       // string str( "abcdefghijk" );
-//       char key = ':';
-//       Int_t colonpos=linestr.find(key);
-//       string strvalue = linestr.substr(colonpos+1);
-//       // std::cout << colonpos << std::endl;
-//       // std::cout <<  << std::endl;
-//       if (linestr.find(strLambda)!=string::npos) {
-//          lambda = std::stod(strvalue);
-//       }
-//       if (linestr.find(strAlpha)!=string::npos) {
-//          alpha = std::stod(strvalue);
-//       }
-//       if (linestr.find(strScintDecay)!=string::npos) {
-//          ScintDecay = std::stod(strvalue);
-//       }
-//       if (linestr.find(strSPwidth)!=string::npos) {
-//          SPwidth = std::stod(strvalue);
-//       }
-//       if (linestr.find(strAPtimeconstant)!=string::npos) {
-//          APtimeconstant = std::stod(strvalue);
-//       }
-//       if (linestr.find(strGain)!=string::npos) {
-//          Gain = std::stod(strvalue);
-//       }
-//       if (linestr.find(strRangeMin)!=string::npos) {
-//          RangeMin = std::stoi(strvalue);
-//       }
-//       if (linestr.find(strRangeMax)!=string::npos) {
-//          RangeMax = std::stoi(strvalue);
-//       }
-//       if (linestr.find(strNstep)!=string::npos) {
-//          Nstep = std::stoi(strvalue);
-//       }
-//       if (linestr.find(strNdiff)!=string::npos) {
-//          Ndiff = std::stoi(strvalue);
-//       }
-//       if (linestr.find(strNevent)!=string::npos) {
-//          Nevent = std::stoi(strvalue);
-//       }
-//       if (linestr.find(strNoiseLevel)!=string::npos) {
-//          noiselist.push_back(std::stod(strvalue));
-//       }
-//    }
-// }
 
 void DisplayNode(TXMLEngine* xml, XMLNodePointer_t node, Int_t level)
 {
