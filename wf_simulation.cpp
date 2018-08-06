@@ -42,9 +42,9 @@ void Init(void) {
    gAPtime ->FixParameter(0,APtimeconstant);
 }
 
-void StatGainCalib(void) {
-   TCanvas *cgr0 =new TCanvas("cgr0", "cgr0",600,600);
-   TCanvas *cgr1 =new TCanvas("cgr1", "cgr1",600,600);
+void wf_simulation(void) {
+//   TCanvas *cgr0 =new TCanvas("cgr0", "cgr0",600,600);
+//   TCanvas *cgr1 =new TCanvas("cgr1", "cgr1",600,600);
    // TCanvas *cgrQNvar =new TCanvas("cgrQNvar", "cgrQNvar",600,600);
    Init();
    std::vector<Double_t> vecSum;
@@ -54,12 +54,14 @@ void StatGainCalib(void) {
 
    TFile* fout = new TFile("fout.root","recreate");
    TTree* tout = new TTree("tout","tout");
-   Double_t charge;
-   Double_t noisevar;
-   Double_t noiselevel;
-   tout->Branch("charge"    ,&charge    ,"charge/D");
-   tout->Branch("noisevar"  ,&noisevar  ,"noisevar/D");
-   tout->Branch("noiselevel",&noiselevel,"noiselevel/D");
+   Int_t noiseNum = noiselist.size();
+   Double_t *charge = new Double_t[noiseNum];
+   Double_t *noisevar = new Double_t[noiseNum];
+   Double_t *noiselevel = new Double_t[noiseNum];
+   tout->Branch("noiselist" ,&noiseNum ,"noiselist/I");
+   tout->Branch("charge"    ,charge    ,"charge[noiselist]/D");
+   tout->Branch("noisevar"  ,noisevar  ,"noisevar[noiselist]/D");
+   tout->Branch("noiselevel",noiselevel,"noiselevel[noiselist]/D");
 
    Double_t sum;
 
@@ -68,18 +70,18 @@ void StatGainCalib(void) {
    Double_t logstep = (TMath::Log(npheRange[1]) - TMath::Log(npheRange[0]))/ (Nstep -1);
 
 
-   TClonesArray* cagrQNvar = new TClonesArray("TGraphErrors",noiselist.size());
+//   TClonesArray* cagrQNvar = new TClonesArray("TGraphErrors",noiselist.size());
    // TClonesArray* cagrQNQ   = new TClonesArray("TGraph",noiselist.size());
    // TClonesArray* cagrInt   = new TClonesArray("TGraph",noiselist.size());
    // TClonesArray* cahQNQ    = new TClonesArray("TH2D",noiselist.size());
-   TClonesArray* cafpol1    = new TClonesArray("TF1",noiselist.size());
+//   TClonesArray* cafpol1    = new TClonesArray("TF1",noiselist.size());
    // TF1* fpol1= new TF1("fpol1","[0]*x+[1]");
    for (int i = 0; i < noiselist.size(); i++) {
-      new ((TGraphErrors*)(*cagrQNvar)[i]) TGraphErrors();
+//      new ((TGraphErrors*)(*cagrQNvar)[i]) TGraphErrors();
       // new ((TGraph*)(*cagrQNQ)[i])   TGraph();
       // new ((TGraph*)(*cagrInt)[i])   TGraph();
       // new ((TH2D*)(*cahQNQ)[i])   TH2D(Form("hQNQ%d",i),Form("hQNQ%d",i),100,0,5000,100,0,5);
-      new ((TF1*)(*cafpol1)[i])   TF1(Form("fpol1%d",i),"[0]*x+[1]");
+//      new ((TF1*)(*cafpol1)[i])   TF1(Form("fpol1%d",i),"[0]*x+[1]");
    }
 
 
@@ -92,38 +94,38 @@ void StatGainCalib(void) {
          cout<<istep<<" "<<iphe<<endl;
 
          for (int i = 0; i < noiselist.size(); i++) {
-            noiselevel=noiselist[i];
+            noiselevel[i]=noiselist[i];
             Waveform* wf= new Waveform(Nbins,-100,1000);
             wf->SetDarkNoiseFrequency(DNFreq);
             wf->MakeEvent(iphe);
             wf->MakeDarkNoise();
-            wf->SetNoiseLevel(noiselevel);
+            wf->SetNoiseLevel(noiselevel[i]);
             wf->MakeElectricNoise();
-            charge  = wf->GetCharge();
+            charge[i]  = wf->GetCharge();
             wf->Differentiate(Ndiff);
-            noisevar = wf->GetTotalVariance();
+            noisevar[i] = wf->GetTotalVariance();
 
             Int_t index=istep*Nevent+irep;
-            ((TGraphErrors*)(*cagrQNvar)[i])->SetPoint(     index,charge,noisevar);
-            ((TGraphErrors*)(*cagrQNvar)[i])->SetPointError(index,0     ,noisevar*0.2);
+//            ((TGraphErrors*)(*cagrQNvar)[i])->SetPoint(     index,charge,noisevar);
+//            ((TGraphErrors*)(*cagrQNvar)[i])->SetPointError(index,0     ,noisevar*0.2);
             // if (wf->GetNDN()>0) {
             //    // std::cout<<"NDN: "<<wf->GetNDN()<<std::endl;
             //    wf->Draw();
             // }
 
             delete wf;
-            tout->Fill();
          }
+         tout->Fill();
       }
    }
    fout->cd();
    tout->Write();
    fout->Close();
-   TString fname="gain1_noise5e-2.pdf";
+//   TString fname="gain1_noise5e-2.pdf";
 
-   TF1* func= new TF1("fitfunc",fitfunc,-10,5000,3);
+//   TF1* func= new TF1("fitfunc",fitfunc,-10,5000,3);
 
-   cgr0->cd();
+/*   cgr0->cd();
    for (int i = 0; i < noiselist.size(); i++) {
 
       Double_t par[3];
@@ -158,6 +160,7 @@ void StatGainCalib(void) {
          ((TGraphErrors*)(*cagrQNvar)[i])->Draw("p same");
       }
    }
+*/
 }
 
 Double_t fitfunc(Double_t *x, Double_t *par){
