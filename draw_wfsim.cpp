@@ -62,6 +62,7 @@ void draw_wfsim(void) {
       }else{
          ((TGraphErrors*)(*cagrQNvar)[i])->Draw("p same");
       }
+      delete pol1;
    }
 
 }
