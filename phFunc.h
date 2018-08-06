@@ -79,12 +79,8 @@ Double_t SingleAPProb(Double_t *x,Double_t *par){
 	Double_t ped    = par[3];
 	Double_t gain   = par[4];
 	Double_t PHexp=ped+k*gain;
-	if (PH>PHexp) {
-		Double_t dom = TMath::Exp(-(PH-PHexp)/beta);
-		Double_t coeff = TMath::Sqrt(2*TMath::Pi())*sigma_k*beta;
-		Double_t inte = TMath::Sqrt(TMath::Pi()/2.)*sigma_k*TMath::Erfc(-(PH-PHexp)/TMath::Sqrt(2)/sigma_k);
-		return dom*inte/coeff;
-	}else{
-		return 0;
-	}
+	Double_t dom = TMath::Exp(-(PH-PHexp)/beta);
+	Double_t coeff = TMath::Sqrt(2*TMath::Pi())*sigma_k*beta;
+	Double_t inte = TMath::Sqrt(TMath::Pi()/2.)*sigma_k*TMath::Erfc(-(PH-PHexp)/TMath::Sqrt(2)/sigma_k);
+	return dom*inte/coeff;
 }
