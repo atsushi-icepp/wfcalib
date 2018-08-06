@@ -35,11 +35,12 @@ void Init(void) {
 
    // LoadSimConfig();
    // std::cout<<"ScintDecay: "<<ScintDecay<<std::endl;
-   gFSctime->SetParameter(0,ScintDecay);
-   gFSingle->SetParameter(0,SPwidth);
-   gFSingle->SetParameter(1,0);
-   gFSingle->FixParameter(2,Gain);
-   gAPtime ->FixParameter(0,APtimeconstant);
+   gFSctime  ->SetParameter(0,ScintDecay);
+   gFLEDtime ->SetParameter(0,LEDWidth);
+   gFSingle  ->SetParameter(0,SPwidth);
+   gFSingle  ->SetParameter(1,0);
+   gFSingle  ->FixParameter(2,Gain);
+   gAPtime   ->FixParameter(0,APtimeconstant);
 }
 
 void StatGainCalib(void) {
@@ -300,9 +301,11 @@ void ParseConfig(TXMLEngine* xml, XMLNodePointer_t node){
 }
 
 void InitConfig(std::string &linestr,std::string &strvalue){
+   if (linestr.find(strLightSource)   !=string::npos)    LightSource = strvalue;
+   if (linestr.find(strScintDecay)    !=string::npos)     ScintDecay = std::stod(strvalue);
+   if (linestr.find(strLEDWidth)      !=string::npos)     LEDWidth   = std::stod(strvalue);
    if (linestr.find(strLambda)        !=string::npos)         lambda = std::stod(strvalue);
    if (linestr.find(strAlpha)         !=string::npos)          alpha = std::stod(strvalue);
-   if (linestr.find(strScintDecay)    !=string::npos)     ScintDecay = std::stod(strvalue);
    if (linestr.find(strSPwidth)       !=string::npos)        SPwidth = std::stod(strvalue);
    if (linestr.find(strAPtimeconstant)!=string::npos) APtimeconstant = std::stod(strvalue);
    if (linestr.find(strGain)          !=string::npos)           Gain = std::stod(strvalue);

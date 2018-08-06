@@ -6,6 +6,10 @@ Double_t alpha;
 string   strAlpha="Alpha";
 Double_t ScintDecay;
 string   strScintDecay="ScintDecay";
+string   LightSource;
+string   strLightSource="LightSource";
+Double_t LEDWidth;
+string   strLEDWidth  ="LEDWidth";
 Double_t SPwidth;
 string   strSPwidth="SinglePulseWidth";
 Double_t APtimeconstant;
@@ -31,12 +35,14 @@ std::vector<Double_t> noiselist;
 string   strNoiseLevel  ="NoiseLevel";
 TString safeName(TString name);
 Double_t funcsctime(Double_t *x, Double_t *par);
+Double_t funcledtime(Double_t *x, Double_t *par);
 Double_t funcsingle(Double_t *x, Double_t *par);
 Double_t APtiming(Double_t *x, Double_t *par);
 Double_t Borel(Double_t,Int_t); // caluculate the P(n) of borel distribution
 Int_t Borel_gen(Double_t); // generate the random variable obeying Borel
 TF1 *gFSingle = new TF1("fsingle", funcsingle, timemin, timemax, 3);
 TF1 *gFSctime = new TF1("fsctime", funcsctime, timemin, timemax, 1);
+TF1 *gFLEDtime = new TF1("fledtime", funcledtime, timemin, timemax, 1);
 TF1 *gAPtime = new TF1("APtime", APtiming, 0, timemax, 1);
 
 TString safeName(TString name){
@@ -49,6 +55,13 @@ Double_t funcsctime(Double_t *x, Double_t *par) {
    //par 0: decay time const
    if (x[0] < 0) return 0;
    else return TMath::Exp(-x[0]/par[0]);
+}
+
+Double_t funcledtime(Double_t *x, Double_t *par) {
+   //par 0: decay time const
+   if (x[0] < 0) return 0;
+	else if(x[0] > par[0]) return 0;
+   else return 1;
 }
 
 Double_t funcsingle(Double_t *x, Double_t *par) {
@@ -232,7 +245,13 @@ void Waveform::SetAmplitude(Double_t* amplitude)
 void Waveform::MakeEvent(Int_t npe){ // define npe as initial number of photon
    gRandom->SetSeed(0);
    for (size_t inpe = 0; inpe < npe; inpe++) {
-      Double_t pulsetime = gFSctime->GetRandom();
+		Double_t pulsetime;
+		if (LightSource=="Scint") {
+pulsetime = gFSctime->GetRandom();
+}else if(LightSource=="LED"){
+pulsetime = gFLEDtime->GetRandom();
+		}
+
       Int_t CT_num = Borel_gen(lambda);
       // Double_t pulsetime=gRandom->Uniform(0,30);
       gFSingle->SetParameter(1, pulsetime);

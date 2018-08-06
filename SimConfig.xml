@@ -2,9 +2,21 @@
 
 <root>
    <configField>
-      <configGroupName>ScintCharacteristics</configGroupName>
+      <configGroupName>LightSource</configGroupName>
+      <config>
+         <name>LightSource</name>
+         <values>
+            <value>LED</value>
+         </values>
+      </config>
       <config>
          <name>ScintDecay</name>
+         <values>
+            <value>45</value>
+         </values>
+      </config>
+      <config>
+         <name>LEDWidth</name>
          <values>
             <value>45</value>
          </values>
@@ -45,7 +57,23 @@
       <config>
          <name>DarkNoiseFrequency</name>
          <values>
-            <value>100e3</value>
+            <value>0</value>
+         </values>
+      </config>
+   </configField>
+   <configField>
+      <configGroupName>WFAnalysis</configGroupName>
+      <!-- <configs> -->
+      <config>
+         <name>IntStart</name>
+         <values>
+            <value>-20</value>
+         </values>
+      </config>
+      <config>
+         <name>IntEnd</name>
+         <values>
+            <value>300</value>
          </values>
       </config>
    </configField>
@@ -85,7 +113,7 @@
       <config>
          <name>Nbins</name>
          <values>
-            <value>2000</value>
+            <value>1100</value>
          </values>
       </config>
       <config>
