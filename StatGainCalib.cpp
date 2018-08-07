@@ -15,6 +15,7 @@ Double_t fitfunc(Double_t *x, Double_t *par);
 void DisplayNode(TXMLEngine* xml, XMLNodePointer_t node, Int_t level);
 void InitConfig(std::string &linestr,std::string &strvalue);
 void ParseConfig(TXMLEngine* xml, XMLNodePointer_t node);
+void WaveformGen(Waveform* wf,Int_t Npho,Double_t noiselevel,Int_t DNFreq);
 // TFile* fResult=new TFile("Result.root","recreate");
 
 void Init(void) {
@@ -45,7 +46,7 @@ void Init(void) {
 
 void StatGainCalib(void) {
    TCanvas *cgr0 =new TCanvas("cgr0", "cgr0",600,600);
-   TCanvas *cgr1 =new TCanvas("cgr1", "cgr1",600,600);
+   // TCanvas *cgr1 =new TCanvas("cgr1", "cgr1",600,600);
    // TCanvas *cgrQNvar =new TCanvas("cgrQNvar", "cgrQNvar",600,600);
    Init();
    std::vector<Double_t> vecSum;
@@ -56,9 +57,13 @@ void StatGainCalib(void) {
    TFile* fout = new TFile("fout.root","recreate");
    TTree* tout = new TTree("tout","tout");
    Double_t charge;
+   Int_t    Npho;
+   Int_t    NphoMean;
    Double_t noisevar;
    Double_t noiselevel;
    tout->Branch("charge"    ,&charge    ,"charge/D");
+   tout->Branch("NphoMean"  ,&NphoMean  ,"NphoMean/I");
+   tout->Branch("Npho"      ,&Npho      ,"Npho/I");
    tout->Branch("noisevar"  ,&noisevar  ,"noisevar/D");
    tout->Branch("noiselevel",&noiselevel,"noiselevel/D");
 
@@ -68,43 +73,37 @@ void StatGainCalib(void) {
 
    Double_t logstep = (TMath::Log(npheRange[1]) - TMath::Log(npheRange[0]))/ (Nstep -1);
 
-
    TClonesArray* cagrQNvar = new TClonesArray("TGraphErrors",noiselist.size());
-   // TClonesArray* cagrQNQ   = new TClonesArray("TGraph",noiselist.size());
-   // TClonesArray* cagrInt   = new TClonesArray("TGraph",noiselist.size());
-   // TClonesArray* cahQNQ    = new TClonesArray("TH2D",noiselist.size());
-   TClonesArray* cafpol1    = new TClonesArray("TF1",noiselist.size());
-   // TF1* fpol1= new TF1("fpol1","[0]*x+[1]");
    for (int i = 0; i < noiselist.size(); i++) {
       new ((TGraphErrors*)(*cagrQNvar)[i]) TGraphErrors();
-      // new ((TGraph*)(*cagrQNQ)[i])   TGraph();
-      // new ((TGraph*)(*cagrInt)[i])   TGraph();
-      // new ((TH2D*)(*cahQNQ)[i])   TH2D(Form("hQNQ%d",i),Form("hQNQ%d",i),100,0,5000,100,0,5);
-      new ((TF1*)(*cafpol1)[i])   TF1(Form("fpol1%d",i),"[0]*x+[1]");
    }
 
 
    for (int istep = 0; istep < Nstep; istep++) {
       // int iphe = (int)TMath::Exp(TMath::Log(npheRange[0]) + logstep * istep);
-      int iphe = istep*(npheRange[1]-npheRange[0])/Nstep;
+      int iphe = (npheRange[1]-npheRange[0])*istep/Nstep+npheRange[0];
       for(int irep=0;irep<Nevent;irep++){
          // cout<<istep<<" "<<iphe<<endl;
-
          for (int i = 0; i < noiselist.size(); i++) {
+
             noiselevel=noiselist[i];
-            Waveform* wf= new Waveform(Nbins,-100,1000);
-            wf->SetDarkNoiseFrequency(DNFreq);
-            Int_t Npho=iphe;
+            NphoMean=iphe;
             if (LightSource=="LED") {
-               Npho=gRandom->Poisson(iphe);
+               Npho=gRandom->Poisson(NphoMean);
+            }else if(LightSource=="Scint"){
+               Npho=NphoMean;
             }
-            wf->MakeEvent(Npho);
-            wf->MakeDarkNoise();
-            wf->SetNoiseLevel(noiselevel);
-            wf->MakeElectricNoise();
-            charge  = wf->GetCharge();
+            Waveform* wf= new Waveform(Nbins,timemin,timemax);
+            WaveformGen(wf,Npho,noiselevel,DNFreq);
+            charge  = wf->GetChargeIntegration(IntStart,IntEnd);
+            // cout<<istep<<" "<<Npho<<"charge: "<<charge<<" blvar: "<<blvar<<endl;
             wf->Differentiate(Ndiff);
-            noisevar = wf->GetTotalVariance();
+            noisevar = wf->GetTotalVariance(IntStart,IntEnd);
+            // Double_t blvar   = wf->GetBaseLineVariance(BaselineStart,BaselineEnd);
+            // Double_t BLratio = (Double_t)wf->GetRegionNpoints(BaselineStart,BaselineEnd)/
+            // (Double_t)wf->GetRegionNpoints(IntStart,IntEnd);
+            // noisevar-=blvar/BLratio;
+            // cout<<istep<<" "<<Npho<<"charge: "<<charge<<" blvar: "<<blvar<<" BLratio: "<<BLratio<<endl;
 
             Int_t index=istep*Nevent+irep;
             ((TGraphErrors*)(*cagrQNvar)[i])->SetPoint(     index,charge,noisevar);
@@ -263,5 +262,17 @@ void InitConfig(std::string &linestr,std::string &strvalue){
    if (linestr.find(strNevent)        !=string::npos)         Nevent = std::stoi(strvalue);
    if (linestr.find(strDNFreq)        !=string::npos)         DNFreq = std::stod(strvalue);
    if (linestr.find(strNbins)         !=string::npos)         Nbins  = std::stoi(strvalue);
+   if (linestr.find(strBLstart)       !=string::npos)  BaselineStart = std::stod(strvalue);
+   if (linestr.find(strBLend)         !=string::npos)   BaselineEnd  = std::stod(strvalue);
+   if (linestr.find(strIntStart)      !=string::npos)       IntStart = std::stod(strvalue);
+   if (linestr.find(strIntEnd)        !=string::npos)        IntEnd  = std::stod(strvalue);
    if (linestr.find(strNoiseLevel)    !=string::npos)     noiselist.push_back(std::stod(strvalue));
+}
+
+void WaveformGen(Waveform* wf,Int_t Npho,Double_t noiselevel,Int_t DNFreq){
+   wf->MakeEvent(Npho);
+   wf->SetDarkNoiseFrequency(DNFreq);
+   wf->MakeDarkNoise();
+   wf->SetNoiseLevel(noiselevel);
+   wf->MakeElectricNoise();
 }

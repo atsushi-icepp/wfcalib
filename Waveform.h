@@ -1,5 +1,5 @@
-Double_t timemin = -100;
-Double_t timemax = 1000;
+Double_t timemin = -400;
+Double_t timemax = 700;
 Double_t lambda;
 string   strLambda="Lambda";
 Double_t alpha;
@@ -30,6 +30,14 @@ Double_t    DNFreq;
 string   strDNFreq  ="DarkNoiseFrequency";
 Int_t    Nbins;
 string   strNbins  ="Nbins";
+Double_t BaselineStart;
+string   strBLstart  ="BLstart";
+Double_t BaselineEnd;
+string   strBLend  ="BLend";
+Double_t IntStart;
+string   strIntStart  ="IntStart";
+Double_t IntEnd;
+string   strIntEnd  ="IntEnd";
 // Int_t    Nevent;
 std::vector<Double_t> noiselist;
 string   strNoiseLevel  ="NoiseLevel";
@@ -108,8 +116,8 @@ protected:
 	Double_t        *fNoiseAmp;
 	Double_t        *fAmplitude;
 	Double_t        *fTime;
-	Double_t        fTimeMin;      //Time of the first (0) point used for fix bin
-	Double_t        fTimeMax;
+	Double_t        fTimeMin=timemin;      //Time of the first (0) point used for fix bin
+	Double_t        fTimeMax=timemax;
 	Double_t        fDNFreq=0;
 	Double_t        fNoiseLevel=0;
 	Int_t           fNDN;
@@ -128,12 +136,17 @@ public:
 	void Draw();
 	Double_t GetAmplitude(Int_t ibin);
 	Double_t GetTimeAt(Int_t ibin);
-	Double_t GetTotalVariance();
-	Double_t GetSignalVariance();
-	Double_t GetCharge();
+	Double_t GetTotalVariance(Double_t IntStart,Double_t IntEnd);
+	Double_t GetSignalVariance(Double_t IntStart,Double_t IntEnd);
+	Double_t GetChargeIntegration(Double_t IntStart,Double_t IntEnd);
+	Double_t GetBaseLineVariance(Double_t BaselineStart,Double_t BaselineEnd);
+	Double_t GetRMS();
 	Double_t GetNoiseConst();
 	Double_t GetInterference();
 	Int_t    GetNDN(){return fNDN;};
+	Int_t    FindPoint(Double_t x);
+	Int_t    GetRegionNpoints(Double_t Start,Double_t End);
+	// Int_t    GetSignalNpoints(Double_t IntStart,Double_t IntEnd);
 
 };
 
@@ -142,8 +155,8 @@ Waveform::Waveform(Int_t npoints,Double_t timemin,Double_t timemax){
 	fTime      = new Double_t[npoints];
 	fAmplitude = new Double_t[npoints];
 	fNoiseAmp  = new Double_t[npoints];
-	fTimeMin   = timemin;
-	fTimeMax   = timemax;
+	// fTimeMin   = timemin;
+	// fTimeMax   = timemax;
 	memset(fAmplitude, 0, sizeof(Double_t)*npoints);
 	memset(fNoiseAmp,  0, sizeof(Double_t)*npoints);
 	for (int ipnt = 0; ipnt < npoints; ipnt++) {
@@ -251,7 +264,7 @@ void Waveform::MakeEvent(Int_t npe){ // define npe as initial number of photon
 		// complete pulse generation with cross talk: After Pulse below
 		for (Int_t ap_cand=0; ap_cand<CT_num; ap_cand++){
 			Double_t uniform_rn = gRandom->Uniform();
-			if (uniform_rn > alpha){
+			if (uniform_rn < alpha){
 				// editing here
 				Double_t APtime = gAPtime->GetRandom();
 				Double_t decayconst = gFSingle->GetParameter(0);
@@ -285,26 +298,67 @@ void Waveform::MakeDarkNoise(){
 
 }
 
-Double_t Waveform::GetCharge(){
+Int_t Waveform::FindPoint(Double_t x)
+{
+   // Find point which is maxmum one under x
+   // -1 : underflow
+   //  0 : first point
+   // ,,,
+   // fNPoints : last bin (overflow)
+   //
+   // cell#     0   1   2   3   4           fNPoints-1
+   //         --*---*---*---*---*------*---*---*--
+   // return -1   0   1   2   3   4             fNPoints-1
+   //
+
+   Int_t point;
+   // if (fFixBinSize) {        // fix bins
+      if (x < fTimeMin) point = -1;
+      else  if (x > fTimeMax) point = fNPoints-1;
+      else point = static_cast<int>((fNPoints-1) * (x-fTimeMin) / (fTimeMax-fTimeMin));
+   // } else {         //Binary search
+   //    if (x < fTime[startpoint]) point = -1;
+   //    else point = static_cast<int>(TMath::BinarySearch(fNPoints - startpoint, fTime + startpoint, x)) + startpoint;
+   // }
+   return point;
+}
+
+Double_t Waveform::GetChargeIntegration(Double_t IntStart,Double_t IntEnd){
 	Double_t charge=0;
-	for (int ipnt = 0; ipnt < fNPoints; ipnt++) {
+	Int_t    startpoint = FindPoint(IntStart) + 1;
+   Int_t    endpoint   = FindPoint(IntEnd) + 1;
+	for (int ipnt = startpoint; ipnt < endpoint; ipnt++) {
 		charge+=(fAmplitude[ipnt]+fNoiseAmp[ipnt])*fBinsize;
 		// std::cout<<"bin: "<<fBinsize<<" amp: "<<fAmplitude[ipnt]<<std::endl;
 	}
 	return charge;
 }
 
-Double_t Waveform::GetTotalVariance(){
+Double_t Waveform::GetBaseLineVariance(Double_t BaselineStart,Double_t BaselineEnd){
 	Double_t variance=0;
-	for (int ipnt = 0; ipnt < fNPoints; ipnt++) {
+	Int_t    startpoint = FindPoint(BaselineStart) + 1;
+   Int_t    endpoint   = FindPoint(BaselineEnd) + 1;
+	for (int ipnt = startpoint; ipnt < endpoint; ipnt++) {
 		variance+=TMath::Power((fAmplitude[ipnt]+fNoiseAmp[ipnt])*fBinsize,2);
 	}
 	return variance;
 }
 
-Double_t Waveform::GetSignalVariance(){
+Double_t Waveform::GetTotalVariance(Double_t IntStart,Double_t IntEnd){
 	Double_t variance=0;
-	for (int ipnt = 0; ipnt < fNPoints; ipnt++) {
+	Int_t    startpoint = FindPoint(IntStart) + 1;
+   Int_t    endpoint   = FindPoint(IntEnd) + 1;
+	for (int ipnt = startpoint; ipnt < endpoint; ipnt++) {
+		variance+=TMath::Power((fAmplitude[ipnt]+fNoiseAmp[ipnt])*fBinsize,2);
+	}
+	return variance;
+}
+
+Double_t Waveform::GetSignalVariance(Double_t IntStart,Double_t IntEnd){
+	Double_t variance=0;
+	Int_t    startpoint = FindPoint(IntStart) + 1;
+   Int_t    endpoint   = FindPoint(IntEnd) + 1;
+	for (int ipnt = startpoint; ipnt < endpoint; ipnt++) {
 		variance+=TMath::Power(fAmplitude[ipnt]*fBinsize,2);
 	}
 	return variance;
@@ -327,4 +381,9 @@ Double_t Waveform::GetNoiseConst(){
 	return noiseconst;
 }
 
-
+Int_t    Waveform::GetRegionNpoints(Double_t Start,Double_t End){
+return FindPoint(End)-FindPoint(Start);
+}
+// Int_t    GetSignalNpoints(Double_t IntStart,Double_t IntEnd){
+// return FindPoint(IntEnd)-FindPoint(IntStart);
+// }
