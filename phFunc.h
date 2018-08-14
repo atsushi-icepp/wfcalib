@@ -16,7 +16,7 @@ Double_t ExpectedSpectrum(Double_t *x,Double_t *par){
 	Double_t sigma_0= par[4];
 	Double_t sigma_1= par[5];
 	Double_t beta   = par[6];
-   Double_t scale  = par[7];
+	Double_t scale  = par[7];
 	Double_t gain   =1.;
 	Double_t ped    =0.;
 	TF1* fgpoi    = new TF1("fgpoi",GeneralizedPoisson,-100,100,2);
@@ -28,31 +28,34 @@ Double_t ExpectedSpectrum(Double_t *x,Double_t *par){
 	fgpoi->SetParameters(mu,lambda);
 	fgph-> SetParameters(0,sigma_0,ped,gain);
 	Double_t vgpoi_ped=fgpoi-> Eval(0);
-	Double_t vgph_ped=fgph-> Eval(xx);
+	Double_t vgph_ped =fgph -> Eval(xx);
 	Double_t term_ped = vgpoi_ped*vgph_ped;
 	Double_t term_ill = 0;
 	fsigmak->SetParameters(sigma_0,sigma_1);
+	Double_t maxGP = 0;
 	for(Int_t k=1;k<kmax+1;k++){
 		Double_t kk=(Double_t)k;
 		Double_t sigma_k= fsigmak->Eval(kk);
 		fgpoi  -> SetParameters(mu,lambda);
 		Double_t GP= fgpoi->Eval(kk);
+		if (GP>maxGP) maxGP = GP;
+		if (GP<maxGP/TMath::Power(10,5)) continue;
 		// i == 0
 		fborel -> SetParameters(0,alpha);
 		fgph   -> SetParameters(kk,sigma_k,ped,gain);
 		Double_t vborel_0 = fborel->Eval(kk);
-		Double_t vgrph_0  = fgph->Eval(xx);
+		Double_t vgrph_0  = fgph  ->Eval(xx);
 		Double_t term_0 = vborel_0*vgrph_0;
 		// i == 1
 		fborel -> SetParameters(1,alpha);
 		fdpdph_1 -> SetParameters(kk,beta,sigma_k,ped,gain);
-		Double_t vborel_1= fborel->Eval(kk);
-		Double_t vdpdph_1  = fdpdph_1->Eval(xx);
+		Double_t vborel_1 = fborel  ->Eval(kk);
+		Double_t vdpdph_1 = fdpdph_1->Eval(xx);
 		Double_t term_1=vborel_1* vdpdph_1;
 		// i > 2
 		Double_t term_i=0;
 		for(Int_t i=2;i<k+1;i++){
-			fborel -> SetParameters(i,alpha);
+			fborel   -> SetParameters(i,alpha);
 			fdpdph_i -> SetParameters(kk,i,beta,ped,gain);
 			term_i+=fborel->Eval(kk)*fdpdph_i->Eval(xx);
 		}
@@ -62,7 +65,7 @@ Double_t ExpectedSpectrum(Double_t *x,Double_t *par){
 		// std::cout<<"term_1"<<term_1<<std::endl;
 		// std::cout<<"term_i"<<term_i<<std::endl;
 		// std::cout<<"GP    "<<GP<<std::endl;
-
+		// std::cout<<"k: "<<k<<" GP: "<<GP<<"term 0: "<<term_0<<" term 1: "<<term_1<<" term_i: "<<term_i<<std::endl;
 	}
 	// std::cout<<"term_ill"<<term_ill<<std::endl;
 	return scale*(term_ped+ term_ill);
@@ -123,7 +126,7 @@ Double_t DiffProb(Double_t *x,Double_t *par){
 	Double_t ped = par[3];
 	Double_t gain= par[4];
 	Double_t PHexp=ped+k*gain;
-	if (PH>PHexp) {
+	if (PH>=PHexp) {
 		Double_t dom = TMath::Power(PH-PHexp,i-1);
 		Double_t num = TMath::Factorial((Int_t)(i-1))*TMath::Power(beta,i);
 		Double_t coeff = TMath::Exp(-(PH-PHexp)/beta);
