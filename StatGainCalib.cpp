@@ -115,9 +115,9 @@ void StatGainCalib(void) {
 
             delete wf;
             tout->Fill();
-         }
-      }
-   }
+         } // end loop for noiselist.size
+      } // end loop for Nevent
+   } // end loop for Nstep
    fout->cd();
    tout->Write();
    fout->Close();
@@ -267,6 +267,7 @@ void InitConfig(std::string &linestr,std::string &strvalue){
    if (linestr.find(strIntStart)      !=string::npos)       IntStart = std::stod(strvalue);
    if (linestr.find(strIntEnd)        !=string::npos)        IntEnd  = std::stod(strvalue);
    if (linestr.find(strNoiseLevel)    !=string::npos)     noiselist.push_back(std::stod(strvalue));
+   if (linestr.find(PixelNoise)       !=string::npos)    PixelNoise  = std::stod(strvalue);
 }
 
 void WaveformGen(Waveform* wf,Int_t Npho,Double_t noiselevel,Int_t DNFreq){
