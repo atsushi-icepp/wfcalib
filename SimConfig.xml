@@ -138,5 +138,11 @@
             <value>0.04</value>
          </values>
       </config>
+      <config>
+         <name>PixelNoise</name>
+         <values>
+            <value>0.04</value>
+         </values>
+      </config>
    </configField>
 </root>
