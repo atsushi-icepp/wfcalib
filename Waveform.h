@@ -41,6 +41,8 @@ string   strIntEnd  ="IntEnd";
 // Int_t    Nevent;
 std::vector<Double_t> noiselist;
 string   strNoiseLevel  ="NoiseLevel";
+Double_t PixelNoise;
+string   strPixelNoise ="PixelNoise";
 TString safeName(TString name);
 Double_t funcsctime(Double_t *x, Double_t *par);
 Double_t funcledtime(Double_t *x, Double_t *par);
@@ -259,7 +261,8 @@ void Waveform::MakeEvent(Int_t npe){ // define npe as initial number of photon
 		gFSingle->SetParameter(1, pulsetime);
 
 		for (int iBin = 0; iBin < Nbins; iBin++) {
-			fAmplitude[iBin]+= CT_num*gFSingle->Eval(fTime[iBin]);
+                        Double_t fluctuate_pix = gRandom->Gaus(1.,PixelNoise/TMath::Sqrt(CT_num));
+			fAmplitude[iBin]+= fluctuate_pix*CT_num*gFSingle->Eval(fTime[iBin]);
 		}
 		// complete pulse generation with cross talk: After Pulse below
 		for (Int_t ap_cand=0; ap_cand<CT_num; ap_cand++){
