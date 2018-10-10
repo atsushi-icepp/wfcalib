@@ -61,7 +61,7 @@ void wf_simulation(void) {
    tout->Branch("noisevar"  ,noisevar  ,"noisevar[noiselist]/D");
    tout->Branch("noiselevel",noiselevel,"noiselevel[noiselist]/D");
    tout->Branch("NphoMean"  ,&NphoMean ,"NphoMean/I");
-   tout->Branch("Npho    "  ,Npho      ,"Npho[noiselist]/I");
+   tout->Branch("Npho"      ,Npho      ,"Npho[noiselist]/I");
 
    Int_t npheRange[2] = {RangeMin,RangeMax};
 
@@ -76,12 +76,12 @@ void wf_simulation(void) {
    for (int istep = 0; istep < Nstep; istep++) {
       // int iphe = (int)TMath::Exp(TMath::Log(npheRange[0]) + logstep * istep);
       int iphe = (npheRange[1]-npheRange[0])*istep/Nstep+npheRange[0];
+      NphoMean=iphe;
       for(int irep=0;irep<Nevent;irep++){
          // cout<<istep<<" "<<iphe<<endl;
          for (int i = 0; i < noiselist.size(); i++) {
 
             noiselevel[i]=noiselist[i];
-            NphoMean=iphe;
             if (LightSource=="LED") {
                Npho[i]=gRandom->Poisson(NphoMean);
             }else if(LightSource=="Scint"){

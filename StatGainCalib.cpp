@@ -7,10 +7,6 @@ void Event(Int_t nPhe, Waveform* wf);
 // Double_t YCut(TGraph* gr);
 // void YCut(TGraph* gr,Double_t *par);
 void LoadSimConfig();
-Double_t DivisionError(Double_t &value1, Double_t &value1err,const Double_t &value2, Double_t &value2err);
-Double_t MultipleError(Double_t &value1, Double_t &value1err, Double_t &value2, Double_t &value2err);
-// void Differentiate(Double_t *wf,Int_t ndiff);
-Double_t fitfunc(Double_t *x, Double_t *par);
 
 void DisplayNode(TXMLEngine* xml, XMLNodePointer_t node, Int_t level);
 void InitConfig(std::string &linestr,std::string &strvalue);
@@ -45,8 +41,6 @@ void Init(void) {
 }
 
 void StatGainCalib(void) {
-   // TCanvas *cgr1 =new TCanvas("cgr1", "cgr1",600,600);
-   // TCanvas *cgrQNvar =new TCanvas("cgrQNvar", "cgrQNvar",600,600);
    Init();
    std::vector<Double_t> vecSum;
    std::vector<std::vector<Double_t>> vecNoise;
@@ -55,16 +49,18 @@ void StatGainCalib(void) {
 
    TFile* fout = new TFile("fout.root","recreate");
    TTree* tout = new TTree("tout","tout");
-   Double_t charge;
-   Int_t    Npho;
-   Int_t    NphoMean;
-   Double_t noisevar;
-   Double_t noiselevel;
-   tout->Branch("charge"    ,&charge    ,"charge/D");
-   tout->Branch("NphoMean"  ,&NphoMean  ,"NphoMean/I");
-   tout->Branch("Npho"      ,&Npho      ,"Npho/I");
-   tout->Branch("noisevar"  ,&noisevar  ,"noisevar/D");
-   tout->Branch("noiselevel",&noiselevel,"noiselevel/D");
+   Int_t noiseNum = noiselist.size();
+   Double_t *charge = new Double_t[noiseNum];
+   Double_t *noisevar = new Double_t[noiseNum];
+   Double_t *noiselevel = new Double_t[noiseNum];
+   Int_t *Npho = new Int_t[noiseNum];
+   Double_t NphoMean;
+   tout->Branch("noiselist" ,&noiseNum ,"noiselist/I");
+   tout->Branch("charge"    ,charge    ,"charge[noiselist]/D");
+   tout->Branch("noisevar"  ,noisevar  ,"noisevar[noiselist]/D");
+   tout->Branch("noiselevel",noiselevel,"noiselevel[noiselist]/D");
+   tout->Branch("NphoMean"  ,&NphoMean ,"NphoMean/D");
+   tout->Branch("Npho"      ,Npho      ,"Npho[noiselist]/I");
 
    Double_t sum;
 
@@ -72,106 +68,36 @@ void StatGainCalib(void) {
 
    Double_t logstep = (TMath::Log(npheRange[1]) - TMath::Log(npheRange[0]))/ (Nstep -1);
 
-   TClonesArray* cagrQNvar = new TClonesArray("TGraphErrors",noiselist.size());
-   for (int i = 0; i < noiselist.size(); i++) {
-      new ((TGraphErrors*)(*cagrQNvar)[i]) TGraphErrors();
-   }
-
-
    for (int istep = 0; istep < Nstep; istep++) {
       // int iphe = (int)TMath::Exp(TMath::Log(npheRange[0]) + logstep * istep);
-      int iphe = (npheRange[1]-npheRange[0])*istep/Nstep+npheRange[0];
+      Double_t iphe = TMath::Exp(logstep*istep)*npheRange[0];
+      NphoMean=iphe;
       for(int irep=0;irep<Nevent;irep++){
          // cout<<istep<<" "<<iphe<<endl;
          for (int i = 0; i < noiselist.size(); i++) {
 
-            noiselevel=noiselist[i];
-            NphoMean=iphe;
+            noiselevel[i]=noiselist[i];
             if (LightSource=="LED") {
-               Npho=gRandom->Poisson(NphoMean);
+               Npho[i]=gRandom->Poisson(NphoMean);
             }else if(LightSource=="Scint"){
-               Npho=NphoMean;
+               Npho[i]=(Int_t)NphoMean;
             }
             Waveform* wf= new Waveform(Nbins,timemin,timemax);
-            WaveformGen(wf,Npho,noiselevel,DNFreq);
-            charge  = wf->GetChargeIntegration(IntStart,IntEnd);
-            // cout<<istep<<" "<<Npho<<"charge: "<<charge<<" blvar: "<<blvar<<endl;
+            WaveformGen(wf,Npho[i],noiselevel[i],DNFreq);
+            charge[i]  = wf->GetChargeIntegration(IntStart,IntEnd);
             wf->Differentiate(Ndiff);
-            noisevar = wf->GetTotalVariance(IntStart,IntEnd);
-            // Double_t blvar   = wf->GetBaseLineVariance(BaselineStart,BaselineEnd);
-            // Double_t BLratio = (Double_t)wf->GetRegionNpoints(BaselineStart,BaselineEnd)/
-            // (Double_t)wf->GetRegionNpoints(IntStart,IntEnd);
-            // noisevar-=blvar/BLratio;
-            // cout<<istep<<" "<<Npho<<"charge: "<<charge<<" blvar: "<<blvar<<" BLratio: "<<BLratio<<endl;
+            noisevar[i] = wf->GetTotalVariance(IntStart,IntEnd);
 
             Int_t index=istep*Nevent+irep;
-            ((TGraphErrors*)(*cagrQNvar)[i])->SetPoint(     index,charge,noisevar);
-            ((TGraphErrors*)(*cagrQNvar)[i])->SetPointError(index,0     ,noisevar*0.2);
-            // if (wf->GetNDN()>0) {
-            //    // std::cout<<"NDN: "<<wf->GetNDN()<<std::endl;
-            //    wf->Draw();
-            // }
 
             delete wf;
-            tout->Fill();
          } // end loop for noiselist.size
+         tout->Fill();
       } // end loop for Nevent
    } // end loop for Nstep
    fout->cd();
    tout->Write();
    fout->Close();
-   TString fname="gain1_noise5e-2.pdf";
-
-   TF1* func= new TF1("fitfunc",fitfunc,-10,5000,3);
-
-   for (int i = 0; i < noiselist.size(); i++) {
-
-      Double_t par[3];
-      Double_t err[3];
-      TF1* pol1= new TF1("fitfunc",fitfunc,-100,5000,3);
-      // pol1->SetParLimits(2,0,1);
-      // pol1->SetParLimits(0,-1,20);
-      ((TGraphErrors*)(*cagrQNvar)[i])->Fit("fitfunc","","");
-      // Double_t par[3];
-      for (int i = 0; i < 3; i++) {
-         par[i]=pol1->GetParameter(i);
-         err[i]=pol1->GetParError(i);
-      }
-
-      Double_t MesGain=par[1]/(1-par[1]*par[2]);
-      Double_t pmul=par[1]*par[2];
-      Double_t pmulerr=MultipleError(par[1],err[1],par[2],err[2]);
-      Double_t MesGainerr=DivisionError(par[1],err[1],(double)1-pmul,pmulerr);
-      std::cout<<"Gain: "<<MesGain<<"+-"<<MesGainerr<<std::endl;
-
-      std::cout<<"Pmul: "<<pmul<<"+-"<<pmulerr<<std::endl;
-      // ((TGraph*)(*cagrQNvar)[i])->Fit("fitfunc","","");
-      ((TGraphErrors*)(*cagrQNvar)[i])->SetTitle("Q_{dint}vs Q^{2}_{drms};Q_{dint};Q^{2}_{drms}");
-      ((TGraph*)(*cagrQNvar)[i])->SetMaximum(500);
-      ((TGraphErrors*)(*cagrQNvar)[i])->SetMinimum(0);
-      ((TGraphErrors*)(*cagrQNvar)[i])->SetMarkerStyle(20);
-      ((TGraphErrors*)(*cagrQNvar)[i])->SetMarkerColor(2+i);
-   }
-}
-
-Double_t fitfunc(Double_t *x, Double_t *par){
-   //par[0]: offset;
-   //par[1]:
-   Double_t  xx        = x[0];
-   // Double_t PMultiple = TMath::Sqrt(TMath::Power(par[2]*xx,2)/1+TMath::Power(par[2]*xx,2));
-   // Double_t PMultiple = par[2];
-   // Double_t Gain = 1;
-   return par[0]+par[1]*(xx+par[2]*xx*xx);
-}
-
-Double_t DivisionError(Double_t &value1, Double_t &value1err,const Double_t &value2, Double_t &value2err){
-   /*calculate error of value 1/ value 2*/
-   return TMath::Sqrt(TMath::Power(value1err/value2,2)+TMath::Power(value1*value2err/(value2*value2),2));
-}
-
-Double_t MultipleError(Double_t &value1, Double_t &value1err, Double_t &value2, Double_t &value2err){
-   /*calculate error of value 1* value 2*/
-   return TMath::Sqrt(TMath::Power(value1err* value2,2)+TMath::Power(value1*value2err,2));
 }
 
 void DisplayNode(TXMLEngine* xml, XMLNodePointer_t node, Int_t level)

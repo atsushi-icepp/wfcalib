@@ -7,6 +7,7 @@ void stat_draw(void) {
    Double_t min = 0.;
    Double_t max = 1000.;
    TCanvas *cgr0 =new TCanvas("cgr0", "cgr0",600,600);
+   TCanvas *cgr1 =new TCanvas("cgr1", "cgr1",600,600);
 //   TCanvas *cgr1 =new TCanvas("cgr1", "cgr1",600,600);
    Int_t maxlist = 5; // this value must be at least the max size of noiselist
    TClonesArray* cagrQNvar = new TClonesArray("TGraphErrors",maxlist);
@@ -19,23 +20,26 @@ void stat_draw(void) {
    TGraph *meanvar = new TGraph();
    TFile* fin = new TFile("fout.root");
    TTree* tin = (TTree*)fin->Get("tout");
-   Int_t noiseNum,truemaxNum,NphoMean;
+   Int_t noiseNum,truemaxNum;
+   Double_t NphoMean;
    Double_t *charge = new Double_t[maxlist];
    Double_t *noisevar = new Double_t[maxlist];
    Double_t *noiselevel = new Double_t[maxlist];
+   Int_t *Npho = new Int_t[maxlist];
    tin->SetBranchAddress("charge", charge);
    tin->SetBranchAddress("noisevar", noisevar);
    tin->SetBranchAddress("noiselevel", noiselevel);
 //   tin->SetBranchAddress("noiselist", &noiseNum);
    tin->SetBranchAddress("NphoMean", &NphoMean);
+   tin->SetBranchAddress("Npho",Npho);
 
    tin->GetEntry(0);
-   Int_t fix_Npho = NphoMean;
+   Double_t fix_Npho = NphoMean;
    Int_t index = 0;
    TH1F *hist = new TH1F("hist","mean vs var",300, min, max);
    for(int ient = 0; ient < tin->GetEntries(); ++ient) {
       tin->GetEntry(ient);
-      Int_t comp_Npho = NphoMean;
+      Double_t comp_Npho = NphoMean;
       if (comp_Npho!=fix_Npho){
          fix_Npho = comp_Npho;
          Double_t mean = hist->GetMean();
@@ -47,7 +51,7 @@ void stat_draw(void) {
          delete hist;
          TH1F *hist = new TH1F("hist","mean vs var",300, min, max);
       }
-      hist->Fill(*charge);
+      hist->Fill(charge[0]);
    }
    Double_t mean = hist->GetMean();
    Double_t var = hist->GetStdDev();
@@ -59,6 +63,8 @@ void stat_draw(void) {
     
    cgr0->cd();
    meanvar->Draw("ap");
+   cgr1->cd();
+   hist->Draw();
 }
 
 Double_t fitfunc(Double_t *x, Double_t *par){
