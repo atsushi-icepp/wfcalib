@@ -63,7 +63,7 @@ void wf_simulation(void) {
    tout->Branch("NphoMean"  ,&NphoMean ,"NphoMean/I");
    tout->Branch("Npho"      ,Npho      ,"Npho[noiselist]/I");
 
-   Int_t npheRange[2] = {RangeMin,RangeMax};
+   Int_t npheRange[2] = {(Int_t)RangeMin,(Int_t)RangeMax};
 
    Double_t logstep = (TMath::Log(npheRange[1]) - TMath::Log(npheRange[0]))/ (Nstep -1);
 
@@ -192,8 +192,8 @@ void InitConfig(std::string &linestr,std::string &strvalue){
    if (linestr.find(strSPwidth)       !=string::npos)        SPwidth = std::stod(strvalue);
    if (linestr.find(strAPtimeconstant)!=string::npos) APtimeconstant = std::stod(strvalue);
    if (linestr.find(strGain)          !=string::npos)           Gain = std::stod(strvalue);
-   if (linestr.find(strRangeMin)      !=string::npos)       RangeMin = std::stoi(strvalue);
-   if (linestr.find(strRangeMax)      !=string::npos)       RangeMax = std::stoi(strvalue);
+   if (linestr.find(strRangeMin)      !=string::npos)       RangeMin = std::stod(strvalue);
+   if (linestr.find(strRangeMax)      !=string::npos)       RangeMax = std::stod(strvalue);
    if (linestr.find(strNstep)         !=string::npos)          Nstep = std::stoi(strvalue);
    if (linestr.find(strNdiff)         !=string::npos)          Ndiff = std::stoi(strvalue);
    if (linestr.find(strNevent)        !=string::npos)         Nevent = std::stoi(strvalue);

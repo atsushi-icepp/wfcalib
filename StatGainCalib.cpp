@@ -40,14 +40,14 @@ void Init(void) {
    gAPtime   ->FixParameter(0,APtimeconstant);
 }
 
-void StatGainCalib(void) {
+void StatGainCalib(TString file_argv="fout.root") {
    Init();
    std::vector<Double_t> vecSum;
    std::vector<std::vector<Double_t>> vecNoise;
    std::vector<std::vector<Double_t>> vecInterference;
 
 
-   TFile* fout = new TFile("fout.root","recreate");
+   TFile* fout = new TFile(file_argv,"recreate");
    TTree* tout = new TTree("tout","tout");
    Int_t noiseNum = noiselist.size();
    Double_t *charge = new Double_t[noiseNum];
@@ -64,7 +64,7 @@ void StatGainCalib(void) {
 
    Double_t sum;
 
-   Int_t npheRange[2] = {RangeMin,RangeMax};
+   Double_t npheRange[2] = {RangeMin,RangeMax};
 
    Double_t logstep = (TMath::Log(npheRange[1]) - TMath::Log(npheRange[0]))/ (Nstep -1);
 
@@ -174,8 +174,8 @@ void InitConfig(std::string &linestr,std::string &strvalue){
    if (linestr.find(strSPwidth)       !=string::npos)        SPwidth = std::stod(strvalue);
    if (linestr.find(strAPtimeconstant)!=string::npos) APtimeconstant = std::stod(strvalue);
    if (linestr.find(strGain)          !=string::npos)           Gain = std::stod(strvalue);
-   if (linestr.find(strRangeMin)      !=string::npos)       RangeMin = std::stoi(strvalue);
-   if (linestr.find(strRangeMax)      !=string::npos)       RangeMax = std::stoi(strvalue);
+   if (linestr.find(strRangeMin)      !=string::npos)       RangeMin = std::stod(strvalue);
+   if (linestr.find(strRangeMax)      !=string::npos)       RangeMax = std::stod(strvalue);
    if (linestr.find(strNstep)         !=string::npos)          Nstep = std::stoi(strvalue);
    if (linestr.find(strNdiff)         !=string::npos)          Ndiff = std::stoi(strvalue);
    if (linestr.find(strNevent)        !=string::npos)         Nevent = std::stoi(strvalue);

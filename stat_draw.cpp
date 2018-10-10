@@ -3,7 +3,7 @@ Double_t fitfunc(Double_t *x, Double_t *par);
 Double_t DivisionError(Double_t &value1, Double_t &value1err,const Double_t &value2, Double_t &value2err);
 Double_t MultipleError(Double_t &value1, Double_t &value1err, Double_t &value2, Double_t &value2err);
 
-void stat_draw(void) {
+void stat_draw(TString rootfile="fout.root") {
    Double_t min = 0.;
    Double_t max = 1000.;
    TCanvas *cgr0 =new TCanvas("cgr0", "cgr0",600,600);
@@ -18,7 +18,7 @@ void stat_draw(void) {
    }
    
    TGraph *meanvar = new TGraph();
-   TFile* fin = new TFile("fout.root");
+   TFile* fin = new TFile(rootfile);
    TTree* tin = (TTree*)fin->Get("tout");
    Int_t noiseNum,truemaxNum;
    Double_t NphoMean;
