@@ -36,7 +36,8 @@ void stat_draw(TString rootfile="fout.root") {
    tin->GetEntry(0);
    Double_t fix_Npho = NphoMean;
    Int_t index = 0;
-   TH1F *hist = new TH1F("hist","mean vs var",300, min, max);
+   TH1F *hist;
+   hist = new TH1F("hist","mean vs var",300, min, max);
    for(int ient = 0; ient < tin->GetEntries(); ++ient) {
       tin->GetEntry(ient);
       Double_t comp_Npho = NphoMean;
@@ -49,7 +50,7 @@ void stat_draw(TString rootfile="fout.root") {
          printf("index is %d mean is %lf var is %lf,\n",index,mean,var);
          index++;
          delete hist;
-         TH1F *hist = new TH1F("hist","mean vs var",300, min, max);
+         hist = new TH1F("hist","mean vs var",300, min, max);
       }
       hist->Fill(charge[0]);
    }
