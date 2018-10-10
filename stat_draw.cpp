@@ -3,73 +3,62 @@ Double_t fitfunc(Double_t *x, Double_t *par);
 Double_t DivisionError(Double_t &value1, Double_t &value1err,const Double_t &value2, Double_t &value2err);
 Double_t MultipleError(Double_t &value1, Double_t &value1err, Double_t &value2, Double_t &value2err);
 
-void draw_wfsim(void) {
+void stat_draw(void) {
+   Double_t min = 0.;
+   Double_t max = 1000.;
    TCanvas *cgr0 =new TCanvas("cgr0", "cgr0",600,600);
-   TCanvas *cgr1 =new TCanvas("cgr1", "cgr1",600,600);
-   Int_t maxlist = 6; // this value must be at least the max size of noiselist
+//   TCanvas *cgr1 =new TCanvas("cgr1", "cgr1",600,600);
+   Int_t maxlist = 5; // this value must be at least the max size of noiselist
    TClonesArray* cagrQNvar = new TClonesArray("TGraphErrors",maxlist);
    TClonesArray* cafpol1    = new TClonesArray("TF1",maxlist);
    for (int i = 0; i < maxlist; i++) {
       new ((TGraphErrors*)(*cagrQNvar)[i]) TGraphErrors();
       new ((TF1*)(*cafpol1)[i])   TF1(Form("fpol1%d",i),"[0]*x+[1]");
    }
-
+   
+   TGraph *meanvar = new TGraph();
    TFile* fin = new TFile("fout.root");
    TTree* tin = (TTree*)fin->Get("tout");
-   Int_t noiseNum;
-   Int_t truemaxNum = 0;
+   Int_t noiseNum,truemaxNum,NphoMean;
    Double_t *charge = new Double_t[maxlist];
    Double_t *noisevar = new Double_t[maxlist];
    Double_t *noiselevel = new Double_t[maxlist];
-   Int_t *Npho = new Int_t[maxlist];
-   Int_t NphoMean;
    tin->SetBranchAddress("charge", charge);
    tin->SetBranchAddress("noisevar", noisevar);
    tin->SetBranchAddress("noiselevel", noiselevel);
-   tin->SetBranchAddress("noiselist", &noiseNum);
-   tin->SetBranchAddress("NphoMean",&NphoMean);
-   tin->SetBranchAddress("Npho",Npho);
+//   tin->SetBranchAddress("noiselist", &noiseNum);
+   tin->SetBranchAddress("NphoMean", &NphoMean);
 
+   tin->GetEntry(0);
+   Int_t fix_Npho = NphoMean;
+   Int_t index = 0;
+   TH1F *hist = new TH1F("hist","mean vs var",300, min, max);
    for(int ient = 0; ient < tin->GetEntries(); ++ient) {
       tin->GetEntry(ient);
-      truemaxNum = MAX(noiseNum,truemaxNum);
-      for (int i = 0; i < noiseNum; i++){
-         ((TGraphErrors*)(*cagrQNvar)[i])->SetPoint(ient,charge[i],noisevar[i]);
-         ((TGraphErrors*)(*cagrQNvar)[i])->SetPointError(ient,0,noisevar[i]*0.2);
+      Int_t comp_Npho = NphoMean;
+      if (comp_Npho!=fix_Npho){
+         fix_Npho = comp_Npho;
+         Double_t mean = hist->GetMean();
+         Double_t var = hist->GetStdDev();
+         var = var*var;
+         meanvar->SetPoint(index,mean,var);
+         printf("index is %d mean is %lf var is %lf,\n",index,mean,var);
+         index++;
+         delete hist;
+         TH1F *hist = new TH1F("hist","mean vs var",300, min, max);
       }
+      hist->Fill(*charge);
    }
-
-   TF1* func= new TF1("fitfunc",fitfunc,-10,5000,3);
-
+   Double_t mean = hist->GetMean();
+   Double_t var = hist->GetStdDev();
+   var = var*var;
+   meanvar->SetPoint(index,mean,var);
+   meanvar->SetMarkerColor(kRed);
+   meanvar->SetMarkerSize(2.);
+   meanvar->SetMarkerStyle(22);
+    
    cgr0->cd();
-   for (int i = 0; i < truemaxNum; i++) {
-      Double_t par[3];
-      Double_t err[3];
-      TF1* pol1= new TF1("fitfunc",fitfunc,-100,5000,3);
-      ((TGraphErrors*)(*cagrQNvar)[i])->Fit("fitfunc","","");
-      for (int i = 0; i < 3; i++) {
-         par[i]=pol1->GetParameter(i);
-         err[i]=pol1->GetParError(i);
-      }
-      Double_t MesGain=par[1]/(1-par[1]*par[2]);
-      Double_t pmul=par[1]*par[2];
-      Double_t pmulerr=MultipleError(par[1],err[1],par[2],err[2]);
-      Double_t MesGainerr=DivisionError(par[1],err[1],(double)1-pmul,pmulerr);
-      std::cout<<"Gain: "<<MesGain<<"+-"<<MesGainerr<<std::endl;
-      std::cout<<"Pmul: "<<pmul<<"+-"<<pmulerr<<std::endl;
-      ((TGraphErrors*)(*cagrQNvar)[i])->SetTitle("Q_{dint}vs Q^{2}_{drms};Q_{dint};Q^{2}_{drms}");
-      ((TGraph*)(*cagrQNvar)[i])->SetMaximum(500);
-      ((TGraphErrors*)(*cagrQNvar)[i])->SetMinimum(0);
-      ((TGraphErrors*)(*cagrQNvar)[i])->SetMarkerStyle(20);
-      ((TGraphErrors*)(*cagrQNvar)[i])->SetMarkerColor(2+i);
-      if (i==0) {
-         ((TGraphErrors*)(*cagrQNvar)[i])->Draw("ap");
-      }else{
-         ((TGraphErrors*)(*cagrQNvar)[i])->Draw("p same");
-      }
-      delete pol1;
-   }
-
+   meanvar->Draw("ap");
 }
 
 Double_t fitfunc(Double_t *x, Double_t *par){

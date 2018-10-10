@@ -21,7 +21,7 @@ void WaveformGen(Waveform* wf,Int_t Npho,Double_t noiselevel,Int_t DNFreq);
 void Init(void) {
    TXMLEngine* xml = new TXMLEngine;
 
-   XMLDocPointer_t xmldoc = xml->ParseFile("./SimConfig.xml");
+   XMLDocPointer_t xmldoc = xml->ParseFile("./StatConfig.xml");
    if (xmldoc==0) {
       delete xml;
       return;
@@ -45,7 +45,6 @@ void Init(void) {
 }
 
 void StatGainCalib(void) {
-   TCanvas *cgr0 =new TCanvas("cgr0", "cgr0",600,600);
    // TCanvas *cgr1 =new TCanvas("cgr1", "cgr1",600,600);
    // TCanvas *cgrQNvar =new TCanvas("cgrQNvar", "cgrQNvar",600,600);
    Init();
@@ -125,7 +124,6 @@ void StatGainCalib(void) {
 
    TF1* func= new TF1("fitfunc",fitfunc,-10,5000,3);
 
-   cgr0->cd();
    for (int i = 0; i < noiselist.size(); i++) {
 
       Double_t par[3];
@@ -153,11 +151,6 @@ void StatGainCalib(void) {
       ((TGraphErrors*)(*cagrQNvar)[i])->SetMinimum(0);
       ((TGraphErrors*)(*cagrQNvar)[i])->SetMarkerStyle(20);
       ((TGraphErrors*)(*cagrQNvar)[i])->SetMarkerColor(2+i);
-      if (i==0) {
-         ((TGraphErrors*)(*cagrQNvar)[i])->Draw("ap");
-      }else{
-         ((TGraphErrors*)(*cagrQNvar)[i])->Draw("p same");
-      }
    }
 }
 

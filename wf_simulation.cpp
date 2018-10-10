@@ -1,16 +1,19 @@
 #include "Waveform.h"
 #include "TXMLEngine.h"
+// #include <boost/property_tree/ptree.hpp>
 
 void Init(void);
 void Event(Int_t nPhe, Waveform* wf);
+// Double_t YCut(TGraph* gr);
+// void YCut(TGraph* gr,Double_t *par);
 void LoadSimConfig();
-Double_t DivisionError(Double_t &value1, Double_t &value1err,const Double_t &value2, Double_t &value2err);
-Double_t MultipleError(Double_t &value1, Double_t &value1err, Double_t &value2, Double_t &value2err);
-Double_t fitfunc(Double_t *x, Double_t *par);
+// void Differentiate(Double_t *wf,Int_t ndiff);
 
 void DisplayNode(TXMLEngine* xml, XMLNodePointer_t node, Int_t level);
 void InitConfig(std::string &linestr,std::string &strvalue);
 void ParseConfig(TXMLEngine* xml, XMLNodePointer_t node);
+void WaveformGen(Waveform* wf,Int_t Npho,Double_t noiselevel,Int_t DNFreq);
+// TFile* fResult=new TFile("Result.root","recreate");
 
 void Init(void) {
    TXMLEngine* xml = new TXMLEngine;
@@ -28,11 +31,14 @@ void Init(void) {
    xml->FreeDoc(xmldoc);
    delete xml;
 
-   gFSctime->SetParameter(0,ScintDecay);
-   gFSingle->SetParameter(0,SPwidth);
-   gFSingle->SetParameter(1,0);
-   gFSingle->FixParameter(2,Gain);
-   gAPtime ->FixParameter(0,APtimeconstant);
+   // LoadSimConfig();
+   // std::cout<<"ScintDecay: "<<ScintDecay<<std::endl;
+   gFSctime  ->SetParameter(0,ScintDecay);
+   gFLEDtime ->SetParameter(0,LEDWidth);
+   gFSingle  ->SetParameter(0,SPwidth);
+   gFSingle  ->SetParameter(1,0);
+   gFSingle  ->FixParameter(2,Gain);
+   gAPtime   ->FixParameter(0,APtimeconstant);
 }
 
 void wf_simulation(void) {
@@ -41,49 +47,75 @@ void wf_simulation(void) {
    std::vector<std::vector<Double_t>> vecNoise;
    std::vector<std::vector<Double_t>> vecInterference;
 
+
    TFile* fout = new TFile("fout.root","recreate");
    TTree* tout = new TTree("tout","tout");
    Int_t noiseNum = noiselist.size();
    Double_t *charge = new Double_t[noiseNum];
    Double_t *noisevar = new Double_t[noiseNum];
    Double_t *noiselevel = new Double_t[noiseNum];
+   Int_t *Npho = new Int_t[noiseNum];
+   Int_t NphoMean;
    tout->Branch("noiselist" ,&noiseNum ,"noiselist/I");
    tout->Branch("charge"    ,charge    ,"charge[noiselist]/D");
    tout->Branch("noisevar"  ,noisevar  ,"noisevar[noiselist]/D");
    tout->Branch("noiselevel",noiselevel,"noiselevel[noiselist]/D");
-
-   Double_t sum;
+   tout->Branch("NphoMean"  ,&NphoMean ,"NphoMean/I");
+   tout->Branch("Npho    "  ,Npho      ,"Npho[noiselist]/I");
 
    Int_t npheRange[2] = {RangeMin,RangeMax};
 
    Double_t logstep = (TMath::Log(npheRange[1]) - TMath::Log(npheRange[0]))/ (Nstep -1);
 
-   for (int istep = 0; istep < Nstep; istep++) {
-      int iphe = istep*(npheRange[1]-npheRange[0])/Nstep;
-      for(int irep=0;irep<Nevent;irep++){
-         cout<<istep<<" "<<iphe<<endl;
+   /*TClonesArray* cagrQNvar = new TClonesArray("TGraphErrors",noiselist.size());
+   for (int i = 0; i < noiselist.size(); i++) {
+      new ((TGraphErrors*)(*cagrQNvar)[i]) TGraphErrors();
+   }*/
 
+
+   for (int istep = 0; istep < Nstep; istep++) {
+      // int iphe = (int)TMath::Exp(TMath::Log(npheRange[0]) + logstep * istep);
+      int iphe = (npheRange[1]-npheRange[0])*istep/Nstep+npheRange[0];
+      for(int irep=0;irep<Nevent;irep++){
+         // cout<<istep<<" "<<iphe<<endl;
          for (int i = 0; i < noiselist.size(); i++) {
+
             noiselevel[i]=noiselist[i];
-            Waveform* wf= new Waveform(Nbins,-100,1000);
-            wf->SetDarkNoiseFrequency(DNFreq);
-            wf->MakeEvent(iphe);
-            wf->MakeDarkNoise();
-            wf->SetNoiseLevel(noiselevel[i]);
-            wf->MakeElectricNoise();
-            charge[i]  = wf->GetCharge();
+            NphoMean=iphe;
+            if (LightSource=="LED") {
+               Npho[i]=gRandom->Poisson(NphoMean);
+            }else if(LightSource=="Scint"){
+               Npho[i]=NphoMean;
+            }
+            Waveform* wf= new Waveform(Nbins,timemin,timemax);
+            WaveformGen(wf,Npho[i],noiselevel[i],DNFreq);
+            charge[i]  = wf->GetChargeIntegration(IntStart,IntEnd);
+            // cout<<istep<<" "<<Npho<<"charge: "<<charge<<" blvar: "<<blvar<<endl;
             wf->Differentiate(Ndiff);
-            noisevar[i] = wf->GetTotalVariance();
+            noisevar[i] = wf->GetTotalVariance(IntStart,IntEnd);
+            // Double_t blvar   = wf->GetBaseLineVariance(BaselineStart,BaselineEnd);
+            // Double_t BLratio = (Double_t)wf->GetRegionNpoints(BaselineStart,BaselineEnd)/
+            // (Double_t)wf->GetRegionNpoints(IntStart,IntEnd);
+            // noisevar-=blvar/BLratio;
+            // cout<<istep<<" "<<Npho<<"charge: "<<charge<<" blvar: "<<blvar<<" BLratio: "<<BLratio<<endl;
 
             Int_t index=istep*Nevent+irep;
+   /*         ((TGraphErrors*)(*cagrQNvar)[i])->SetPoint(     index,charge[i],noisevar[i]);
+            ((TGraphErrors*)(*cagrQNvar)[i])->SetPointError(index,0     ,noisevar[i]*0.2);
+      */      // if (wf->GetNDN()>0) {
+            //    // std::cout<<"NDN: "<<wf->GetNDN()<<std::endl;
+            //    wf->Draw();
+            // }
+
             delete wf;
-         }
+         } // end loop for noiselist.size
          tout->Fill();
-      }
-   }
+      } // end loop for Nevent
+   } // end loop for Nstep
    fout->cd();
    tout->Write();
    fout->Close();
+
 }
 
 void DisplayNode(TXMLEngine* xml, XMLNodePointer_t node, Int_t level)
@@ -111,7 +143,6 @@ void DisplayNode(TXMLEngine* xml, XMLNodePointer_t node, Int_t level)
       child = xml->GetNext(child);
    }
 }
-
 
 void ParseConfig(TXMLEngine* xml, XMLNodePointer_t node){
    // this function display all accessible information about xml node and its children
@@ -153,9 +184,11 @@ void ParseConfig(TXMLEngine* xml, XMLNodePointer_t node){
 }
 
 void InitConfig(std::string &linestr,std::string &strvalue){
+   if (linestr.find(strLightSource)   !=string::npos)    LightSource = strvalue;
+   if (linestr.find(strScintDecay)    !=string::npos)     ScintDecay = std::stod(strvalue);
+   if (linestr.find(strLEDWidth)      !=string::npos)     LEDWidth   = std::stod(strvalue);
    if (linestr.find(strLambda)        !=string::npos)         lambda = std::stod(strvalue);
    if (linestr.find(strAlpha)         !=string::npos)          alpha = std::stod(strvalue);
-   if (linestr.find(strScintDecay)    !=string::npos)     ScintDecay = std::stod(strvalue);
    if (linestr.find(strSPwidth)       !=string::npos)        SPwidth = std::stod(strvalue);
    if (linestr.find(strAPtimeconstant)!=string::npos) APtimeconstant = std::stod(strvalue);
    if (linestr.find(strGain)          !=string::npos)           Gain = std::stod(strvalue);
@@ -166,5 +199,18 @@ void InitConfig(std::string &linestr,std::string &strvalue){
    if (linestr.find(strNevent)        !=string::npos)         Nevent = std::stoi(strvalue);
    if (linestr.find(strDNFreq)        !=string::npos)         DNFreq = std::stod(strvalue);
    if (linestr.find(strNbins)         !=string::npos)         Nbins  = std::stoi(strvalue);
+   if (linestr.find(strBLstart)       !=string::npos)  BaselineStart = std::stod(strvalue);
+   if (linestr.find(strBLend)         !=string::npos)   BaselineEnd  = std::stod(strvalue);
+   if (linestr.find(strIntStart)      !=string::npos)       IntStart = std::stod(strvalue);
+   if (linestr.find(strIntEnd)        !=string::npos)        IntEnd  = std::stod(strvalue);
    if (linestr.find(strNoiseLevel)    !=string::npos)     noiselist.push_back(std::stod(strvalue));
+   if (linestr.find(PixelNoise)       !=string::npos)    PixelNoise  = std::stod(strvalue);
+}
+
+void WaveformGen(Waveform* wf,Int_t Npho,Double_t noiselevel,Int_t DNFreq){
+   wf->MakeEvent(Npho);
+   wf->SetDarkNoiseFrequency(DNFreq);
+   wf->MakeDarkNoise();
+   wf->SetNoiseLevel(noiselevel);
+   wf->MakeElectricNoise();
 }
