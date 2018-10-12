@@ -257,18 +257,17 @@ void Waveform::MakeEvent(Int_t npe){ // define npe as initial number of photon
 		}
 
 		Int_t CT_num = Borel_gen(lambda);
+                Double_t fluctuate_pix = gRandom->Gaus(1.,PixelNoise/TMath::Sqrt(CT_num));
 		// Double_t pulsetime=gRandom->Uniform(0,30);
 		gFSingle->SetParameter(1, pulsetime);
 
 		for (int iBin = 0; iBin < Nbins; iBin++) {
-                        Double_t fluctuate_pix = gRandom->Gaus(1.,PixelNoise/TMath::Sqrt(CT_num));
 			fAmplitude[iBin]+= fluctuate_pix*CT_num*gFSingle->Eval(fTime[iBin]);
 		}
 		// complete pulse generation with cross talk: After Pulse below
 		for (Int_t ap_cand=0; ap_cand<CT_num; ap_cand++){
 			Double_t uniform_rn = gRandom->Uniform();
 			if (uniform_rn < alpha){
-				// editing here
 				Double_t APtime = gAPtime->GetRandom();
 				Double_t decayconst = gFSingle->GetParameter(0);
 				Double_t AP_amp = 1.-TMath::Exp(-APtime/decayconst);
