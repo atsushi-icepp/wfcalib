@@ -141,6 +141,7 @@ public:
 	Double_t GetTotalVariance(Double_t IntStart,Double_t IntEnd);
 	Double_t GetSignalVariance(Double_t IntStart,Double_t IntEnd);
 	Double_t GetChargeIntegration(Double_t IntStart,Double_t IntEnd);
+	Double_t GetPulseHeight(Double_t IntStart,Double_t IntEnd);
 	Double_t GetBaseLineVariance(Double_t BaselineStart,Double_t BaselineEnd);
 	Double_t GetRMS();
 	Double_t GetNoiseConst();
@@ -334,6 +335,16 @@ Double_t Waveform::GetChargeIntegration(Double_t IntStart,Double_t IntEnd){
 		// std::cout<<"bin: "<<fBinsize<<" amp: "<<fAmplitude[ipnt]<<std::endl;
 	}
 	return charge;
+}
+
+Double_t Waveform::GetPulseHeight(Double_t IntStart,Double_t IntEnd){
+	Double_t height=-1e9;
+        Int_t startpoint = FindPoint(IntStart)+1;
+	Int_t endpoint = FindPoint(IntEnd)+1;
+	for(int ipnt=startpoint;ipnt<endpoint;ipnt++){
+		if(fAmplitude[ipnt]+fNoiseAmp[ipnt]>height) height=fAmplitude[ipnt]+fNoiseAmp[ipnt];
+	}
+	return height;
 }
 
 Double_t Waveform::GetBaseLineVariance(Double_t BaselineStart,Double_t BaselineEnd){

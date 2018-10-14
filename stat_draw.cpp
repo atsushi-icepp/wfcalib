@@ -4,7 +4,8 @@ Double_t DivisionError(Double_t &value1, Double_t &value1err,const Double_t &val
 Double_t MultipleError(Double_t &value1, Double_t &value1err, Double_t &value2, Double_t &value2err);
 
 void stat_draw(TString rootfile="fout.root") {
-   Double_t min = 0.;
+   Double_t fitrange[2] = {5.,150.};
+   Double_t min = -10.;
    Double_t max = 1000.;
    TCanvas *cgr0 =new TCanvas("cgr0", "cgr0",600,600);
    TCanvas *cgr1 =new TCanvas("cgr1", "cgr1",600,600);
@@ -25,6 +26,8 @@ void stat_draw(TString rootfile="fout.root") {
    Double_t *charge = new Double_t[maxlist];
    Double_t *noisevar = new Double_t[maxlist];
    Double_t *noiselevel = new Double_t[maxlist];
+   Double_t *height= new Double_t[maxlist];
+   Double_t *diffheight = new Double_t[maxlist];
    Int_t *Npho = new Int_t[maxlist];
    tin->SetBranchAddress("charge", charge);
    tin->SetBranchAddress("noisevar", noisevar);
@@ -32,6 +35,8 @@ void stat_draw(TString rootfile="fout.root") {
 //   tin->SetBranchAddress("noiselist", &noiseNum);
    tin->SetBranchAddress("NphoMean", &NphoMean);
    tin->SetBranchAddress("Npho",Npho);
+   tin->SetBranchAddress("height",height);
+   tin->SetBranchAddress("diffheight",diffheight);
 
    tin->GetEntry(0);
    Double_t fix_Npho = NphoMean;
@@ -50,7 +55,7 @@ void stat_draw(TString rootfile="fout.root") {
          printf("index is %d mean is %lf var is %lf,\n",index,mean,var);
          index++;
          delete hist;
-         hist = new TH1F("hist","mean vs var",300, min, max);
+         hist = new TH1F("hist","mean vs var",30000, min, max);
       }
       hist->Fill(charge[0]);
    }
@@ -61,9 +66,11 @@ void stat_draw(TString rootfile="fout.root") {
    meanvar->SetMarkerColor(kRed);
    meanvar->SetMarkerSize(2.);
    meanvar->SetMarkerStyle(22);
-    
+   TF1 *chokusen = new TF1("chokusen","pol1",0.,250.); 
    cgr0->cd();
    meanvar->Draw("ap");
+   meanvar->Fit(chokusen,"","",fitrange[0],fitrange[1]);
+   chokusen->Draw("same");
    cgr1->cd();
    hist->Draw();
 }

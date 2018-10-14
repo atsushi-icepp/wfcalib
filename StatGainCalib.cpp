@@ -53,6 +53,8 @@ void StatGainCalib(TString file_argv="fout.root") {
    Double_t *charge = new Double_t[noiseNum];
    Double_t *noisevar = new Double_t[noiseNum];
    Double_t *noiselevel = new Double_t[noiseNum];
+   Double_t *height = new Double_t[noiseNum];
+   Double_t *diffheight = new Double_t[noiseNum];
    Int_t *Npho = new Int_t[noiseNum];
    Double_t NphoMean;
    tout->Branch("noiselist" ,&noiseNum ,"noiselist/I");
@@ -61,6 +63,8 @@ void StatGainCalib(TString file_argv="fout.root") {
    tout->Branch("noiselevel",noiselevel,"noiselevel[noiselist]/D");
    tout->Branch("NphoMean"  ,&NphoMean ,"NphoMean/D");
    tout->Branch("Npho"      ,Npho      ,"Npho[noiselist]/I");
+   tout->Branch("height"    ,height    ,"height[noiselist]/D");
+   tout->Branch("diffheight",diffheight,"diffheight[noiselist]/D");
 
    Double_t sum;
 
@@ -85,8 +89,10 @@ void StatGainCalib(TString file_argv="fout.root") {
             Waveform* wf= new Waveform(Nbins,timemin,timemax);
             WaveformGen(wf,Npho[i],noiselevel[i],DNFreq);
             charge[i]  = wf->GetChargeIntegration(IntStart,IntEnd);
+            height[i]  = wf->GetPulseHeight(IntStart,IntEnd);
             wf->Differentiate(Ndiff);
             noisevar[i] = wf->GetTotalVariance(IntStart,IntEnd);
+            diffheight[i]=wf->GetPulseHeight(IntStart,IntEnd);
 
             Int_t index=istep*Nevent+irep;
 
