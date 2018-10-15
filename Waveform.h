@@ -291,11 +291,26 @@ void Waveform::MakeDarkNoise(){
 	for (Int_t iDN = 0; iDN < fNDN; iDN++) {
 		Double_t DNtime=gRandom->Uniform(-500,1500);
 		// std::cout<<" time : "<<DNtime<<std::endl;
+		Int_t CT_num = Borel_gen(lambda);
+		Double_t fluctuate_pix = gRandom->Gaus(1.,PixelNoise/TMath::Sqrt(CT_num));
 		gFSingle->SetParameter(1,DNtime);
 		for(int iBin=0; iBin < Nbins; iBin++){
-			fAmplitude[iBin]+= gFSingle->Eval(fTime[iBin]);
+			fAmplitude[iBin]+= fluctuate_pix*CT_num*gFSingle->Eval(fTime[iBin]);
 		}
-	}
+                for (Int_t ap_cand=0; ap_cand<CT_num; ap_cand++){
+                        Double_t uniform_rn = gRandom->Uniform();
+                        if (uniform_rn < alpha){
+                                Double_t APtime = gAPtime->GetRandom();
+                                Double_t decayconst = gFSingle->GetParameter(0);
+                                Double_t AP_amp = 1.-TMath::Exp(-APtime/decayconst);
+                                gFSingle->SetParameter(1,DNtime+APtime);
+                                for(int iBin=0; iBin < Nbins; iBin++){
+                                        fAmplitude[iBin]+= AP_amp*gFSingle->Eval(fTime[iBin]);
+                                }
+                        }
+                }// end of afterpulse 
+
+	}// end loop for dark events
 
 
 
